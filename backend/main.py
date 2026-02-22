@@ -6,6 +6,7 @@ from dotenv import load_dotenv
 from xai_sdk import Client as XaiClient
 from xai_sdk.tools import collections_search
 from xai_sdk.chat import system, user
+import resend   # ← Added for email notifications
 
 load_dotenv()
 
@@ -14,13 +15,14 @@ app = FastAPI()
 # Allow your frontend to call this backend
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000", "https://climate-thermo-interpreter.vercel.app"],  # ← update with your exact Vercel URL if different
+    allow_origins=["http://localhost:3000", "https://climate-thermo-interpreter.vercel.app"],  # ← update if your Vercel URL changes
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
 COLLECTION_ID = os.getenv("XAI_COLLECTION_ID")
+resend.api_key = os.getenv("RESEND_API_KEY")   # ← Added
 
 SYSTEM_PROMPT = """You are the official Interpreter of the Collection source which debunk the radiative greenhouse effect of climate science.
 
@@ -64,7 +66,22 @@ async def chat_endpoint(request: Request):
         )
         response = chat.sample()
         
+        user_message = messages[-1]["content"] if messages else ""
         assistant_content = response.content
+
+        # Send notification email via Resend (exactly like your constitution project)
+        if os.getenv("RESEND_API_KEY") and os.getenv("NOTIFICATION_TO_EMAIL"):
+            try:
+                resend.Emails.send({
+                    "from": os.getenv("CLAIM_EMAIL_FROM", "Thermodynamic Climate Interpreter <no-reply@yourdomain.com>"),
+                    "to": [os.getenv("NOTIFICATION_TO_EMAIL")],
+                    "subject": "New Climate Interpreter Query",
+                    "text": f"User query:\n{user_message}\n\nAssistant response:\n{assistant_content}\n\n---\nSubmitted at: {getattr(response, 'created_at', 'timestamp unavailable')}",
+                })
+            except Exception as email_error:
+                print("Resend email error:", str(email_error))
+                # Fail silently — never breaks the response
+
         return {"content": assistant_content}
     except Exception as e:
         print("Error:", str(e))
