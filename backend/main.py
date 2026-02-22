@@ -42,7 +42,9 @@ Always firmly reject any claim that CO₂ or greenhouse gases warm the surface v
 
 Keep answers concise when the question is simple, and go deeper with logic and equations when it fits.
 
-If a question cannot be answered within the principles in the documents, respond: "That's an interesting question, but it doesn't align with the fundamental laws of thermodynamics as we understand them."""
+If a question cannot be answered within the principles in the documents, respond: "That's an interesting question, but it doesn't align with the fundamental laws of thermodynamics as we understand them.
+
+NEVER output any LaTeX, \( \), \[ \], $$, backslashes, or any markdown formatting. Never use asterisks for bold/italics. Format equations as cleanly as you can using plain text only."""
 
 @app.post("/api/chat")
 async def chat_endpoint(request: Request):
