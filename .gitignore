@@ -1,0 +1,46 @@
+# =============================================
+# Root .gitignore for climate-thermo-interpreter
+# Next.js + FastAPI monorepo
+# =============================================
+
+# Next.js Frontend
+frontend/node_modules/
+frontend/.next/
+frontend/out/
+frontend/.env
+frontend/.env.local
+frontend/.env.*.local
+
+# FastAPI / Python Backend
+backend/__pycache__/
+backend/*.pyc
+backend/*.pyo
+backend/*.pyd
+backend/venv/
+backend/.venv/
+backend/.env
+
+# Environment files (security critical - catch-all)
+**/.env
+**/.env.local
+**/.env.*.local
+
+# Logs and temporary files
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# OS generated files
+.DS_Store
+Thumbs.db
+
+# IDE / Editor folders
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Build / Deploy temp
+.vercel/
+.railway/
