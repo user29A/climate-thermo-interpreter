@@ -126,19 +126,7 @@ export default function ClimateInterpreterPage() {
         <p className="text-center text-muted-foreground mt-6 mb-10">
           Responses are generated using Grok with Retrieval-Augmented Generation.
         </p>
-      </div>
-
-      <div className="flex flex-col sm:flex-row gap-6 justify-center mt-8">
-        <Button size="lg" variant="outline" asChild>
-          <a href="/">Home</a>
-        </Button>
-        <Button size="lg" variant="outline" asChild>
-          <a href="/why">Why the Documents Matter</a>
-        </Button>
-        <Button size="lg" variant="outline" asChild>
-          <a href="https://console.x.ai" target="_blank">View Collections</a>
-        </Button>
-      </div>
+      </div>      
     </section>
   );
 }
