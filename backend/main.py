@@ -14,14 +14,11 @@ app = FastAPI()
 # Allow your frontend to call this backend
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000", "https://your-vercel-domain.vercel.app"],  # ← change to your real Vercel URL after deploy
+    allow_origins=["http://localhost:3000", "https://your-vercel-domain.vercel.app"],  # ← change to your real Vercel URL
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
-# xAI client — reads XAI_API_KEY from environment
-xai_client = XaiClient()
 
 COLLECTION_ID = os.getenv("XAI_COLLECTION_ID")
 
@@ -35,16 +32,21 @@ You may elaborate at length with physics-based justifications, mathematical reas
 
 Never invent data or conclusions which cannot be referenced in some way from the collection.
 
-Uphold the explicit thermodynamic principles: conservation of energy (1st Law), increase of entropy (2nd Law), impossibility of net radiative heat transfer from cooler to warmer surfaces without external work, the gravity-driven lapse rate, and all other derivations contained in the documents.
+Uphold the explicit thermodynamic principles: conservation of energy (1st Law), increase of entropy (2nd Law), impossibility of net radiative heat transfer from cooler to warmer surfaces without external work, the gravity-driven lapse rate, and all other derivations and information contained in the documents.
 
-Do not use markdown in your output. Never use markdown in output.
+Use mathematics in your responses when relevant, and provide step-by-step derivations or explanations for complex questions.
 
-If a question cannot be directly answered from the documents or principles therein, respond with the exact text: "Please ask a question aligned with the thermodynamic and physical principles."."""
+Do not use markdown in your output. Never use markdown in your output.
+
+If a question cannot be directly answered from the documents or principles therein, respond with the exact text: "Please ask a question aligned with thermodynamic and physical principles."."""
 
 @app.post("/api/chat")
 async def chat_endpoint(request: Request):
     if not COLLECTION_ID:
         return {"error": "Collection ID not configured"}, 500
+
+    # Create client inside the endpoint (safe for Railway)
+    xai_client = XaiClient()
 
     body = await request.json()
     messages = body.get("messages", [])
