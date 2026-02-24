@@ -27,20 +27,23 @@ export default function TheoryPage() {
           <div className="bg-muted p-6 rounded-lg text-lg mb-8 font-mono leading-relaxed">
             1. Hydrostatic equilibrium: dP/dh = –ρ g<br />
             2. Ideal gas law: P = ρ R T  ⇒  ρ = P / (R T)<br />
-            3. First law for adiabatic parcel (no net heat exchange with environment): C_p dT = –g dh<br /><br />
+            3. First law for adiabatic parcel (no net heat exchange): C_p dT = –g dh<br /><br />
             
             From (1) and (3): dh = -dP/(ρ g) ⇒ dT = (1/C_p) (dP / ρ)<br />
             Substitute (2): dT/T = (R / C_p) (dP / P)<br /><br />
             
-            Integrate from emitting level (T_top, P_top) to level P:<br />
-            ln(T / T_top) = (R/C_p) ln(P / P_top)<br />
-            <strong>T(P) = T_top × (P / P_top)<sup>0.286</sup></strong><br />
-            (where 0.286 ≈ R/C_p for typical planetary diatomic gases; P in bars)
+            Integrate between any two physical levels on the same adiabat:<br />
+            ln(T / T_ref) = (R/C_p) ln(P / P_ref)<br />
+            <strong>T(P) = T_ref × (P / P_ref)<sup>0.286</sup></strong><br />
+            (where 0.286 ≈ R/C_p for typical planetary gases; P in bars)
           </div>
 
           <p className="text-lg mb-8">
-            T_top is the temperature at the effective emitting level (optical depth τ ≈ 1), calculated purely from absorbed solar flux using T_top = [S(1-A)/(4σ)]<sup>1/4</sup>.
-            This gives the universal thermodynamic temperature-pressure profile. Below are applications ordered by distance from the Sun. For rocky planets we also show surface temperature computations.
+            The reference pair (T_ref, P_ref) is any real physical point on the profile. A convenient choice is the 1-bar level (T_1bar), whose absolute value is set directly by the planet’s total absorbed solar energy plus the gravitational compression work performed by the entire atmospheric mass above that fixed pressure level — pure thermodynamics, zero radiative terms.
+          </p>
+
+          <p className="text-lg">
+            The planetary effective temperature T_eff = [S(1–A)/(4σ)]¹/⁴ is not a physical temperature at any specific altitude. It is simply the global blackbody equivalent of the total energy that must leave the top of the atmosphere to maintain energy balance. The actual emission occurs at whichever pressure level on the already-fixed adiabat satisfies optical depth τ ≈ 1. Because the profile is rigid, this automatically gives the correct T_eff without any adjustment to surface or 1-bar temperature.
           </p>
 
           <div className="space-y-10">
