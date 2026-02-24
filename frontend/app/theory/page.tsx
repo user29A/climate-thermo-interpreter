@@ -99,8 +99,11 @@ export default function TheoryPage() {
             <div>
               <h3 className="font-semibold text-xl mb-3">Titan (Saturn’s moon)</h3>
               <p className="text-muted-foreground">
-                Same parameters scaled to distance → <strong>Calculated T(1 bar) ≈ 95 K</strong><br />
-                Observed surface temperature (near 1.5 bar): ~94 K — outstanding agreement
+                T_top ≈ 84 K (absorbed solar at 9.5 AU, Bond albedo ~0.27, negligible internal heat)<br />
+                Surface pressure ≈ 1.5 bar<br />
+                T_surface = 84 × (1.5)<sup>0.286</sup> ≈ 94.3 K<br />
+                <strong>Calculated surface temperature ≈ 94 K</strong><br />
+                Observed: ~94 K — perfect match
               </p>
             </div>
           </div>
