@@ -45,8 +45,17 @@ export default function ClimateInterpreterPage() {
       });
 
       if (!res.ok) {
-        const error = await res.text();
-        throw new Error(error || "API error");
+        let message = "Error connecting to the interpreter. Please try again.";
+        try {
+          const err = await res.json();
+          if (res.status === 429) {
+            message = err.error || "Too many questions right now. Please wait a few minutes and try again.";
+          }
+        } catch {
+          // keep default message
+        }
+        setMessages((prev) => [...prev, { role: "assistant", content: message }]);
+        return;
       }
 
       const data = await res.json();

@@ -1,6 +1,11 @@
 import os
+import time
+import threading
+from collections import defaultdict, deque
+
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from dotenv import load_dotenv
 
 from xai_sdk import Client as XaiClient
@@ -11,6 +16,56 @@ import resend   # ← Added for email notifications
 load_dotenv()
 
 app = FastAPI()
+
+# High enough for a long real session; tight enough to stop a script.
+# (count, window_seconds)
+RATE_LIMITS = (
+    (15, 60),        # 15 per minute
+    (80, 3600),      # 80 per hour
+    (200, 86400),    # 200 per day
+)
+MAX_MESSAGES = 40
+MAX_MESSAGE_CHARS = 8000
+
+
+class SlidingWindowLimiter:
+    def __init__(self, limits):
+        self.limits = limits
+        self.hits = defaultdict(deque)
+        self.lock = threading.Lock()
+        self.max_window = max(window for _, window in limits)
+
+    def allow(self, key: str):
+        now = time.time()
+        with self.lock:
+            q = self.hits[key]
+            cutoff = now - self.max_window
+            while q and q[0] <= cutoff:
+                q.popleft()
+            for max_n, window in self.limits:
+                window_start = now - window
+                count = sum(1 for t in q if t > window_start)
+                if count >= max_n:
+                    oldest = next(t for t in q if t > window_start)
+                    retry_after = max(1, int(oldest + window - now) + 1)
+                    return False, retry_after
+            q.append(now)
+            return True, 0
+
+
+limiter = SlidingWindowLimiter(RATE_LIMITS)
+
+
+def client_ip(request: Request) -> str:
+    forwarded = request.headers.get("x-forwarded-for")
+    if forwarded:
+        return forwarded.split(",")[0].strip()
+    real = request.headers.get("x-real-ip")
+    if real:
+        return real.strip()
+    if request.client and request.client.host:
+        return request.client.host
+    return "unknown"
 
 # Allow your frontend to call this backend
 app.add_middleware(
@@ -58,13 +113,41 @@ NEVER output any LaTeX, \( \), \[ \], $$, backslashes, or any markdown formattin
 
 @app.post("/api/chat")
 async def chat_endpoint(request: Request):
+    expected_secret = os.getenv("BACKEND_SECRET")
+    if expected_secret:
+        provided = request.headers.get("x-backend-secret", "")
+        if provided != expected_secret:
+            return JSONResponse({"error": "Unauthorized"}, status_code=401)
+
+    allowed, retry_after = limiter.allow(client_ip(request))
+    if not allowed:
+        return JSONResponse(
+            {
+                "error": "Too many questions right now. Please wait a few minutes and try again.",
+            },
+            status_code=429,
+            headers={"Retry-After": str(retry_after)},
+        )
+
     if not COLLECTION_ID:
-        return {"error": "Collection ID not configured"}, 500
+        return JSONResponse({"error": "Collection ID not configured"}, status_code=500)
+
+    try:
+        body = await request.json()
+    except Exception:
+        return JSONResponse({"error": "Invalid request"}, status_code=400)
+
+    messages = body.get("messages", [])
+    if not isinstance(messages, list) or not messages:
+        return JSONResponse({"error": "Invalid request"}, status_code=400)
+    if len(messages) > MAX_MESSAGES:
+        messages = messages[-MAX_MESSAGES:]
+    for msg in messages:
+        content = msg.get("content", "") if isinstance(msg, dict) else ""
+        if not isinstance(content, str) or not content.strip() or len(content) > MAX_MESSAGE_CHARS:
+            return JSONResponse({"error": "Invalid message"}, status_code=400)
 
     xai_client = XaiClient()
-
-    body = await request.json()
-    messages = body.get("messages", [])
 
     try:
         chat = xai_client.chat.create(
