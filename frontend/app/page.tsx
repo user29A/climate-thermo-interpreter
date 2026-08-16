@@ -130,6 +130,16 @@ export default function ClimateInterpreterPage() {
             </div>
           </form>
         </Card>
+
+        <p className="text-center text-muted-foreground mt-8 mb-10">
+          Contact:{" "}
+          <a
+            href="mailto:joepostma@live.ca"
+            className="underline underline-offset-4 hover:text-foreground"
+          >
+            joepostma@live.ca
+          </a>
+        </p>
       </div>      
     </section>
   );
