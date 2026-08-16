@@ -44,3 +44,6 @@ Thumbs.db
 # Build / Deploy temp
 .vercel/
 .railway/
+
+# Local OG card drafts
+frontend/og-previews/
