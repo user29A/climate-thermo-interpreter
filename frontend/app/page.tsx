@@ -65,12 +65,11 @@ export default function ClimateInterpreterPage() {
   return (
     <section className="py-16 md:py-24 lg:py-16 min-h-screen bg-background">
       <div className="container mx-auto px-4 max-w-5xl">
-        <h1 className="text-4xl md:text-7xl font-bold text-center mb-12 text-red-700">
-          Ask a Question!
+        <h1 className="text-4xl md:text-6xl font-bold text-center mb-12 text-red-700">
+          Thermodynamic Climate Interpreter
         </h1>
 
         <p className="text-center text-lg md:text-xl text-muted-foreground mb-12 max-w-3xl mx-auto">
-          Welcome to the Thermodynamic Climate Interpreter. 
           Ask any question about radiation, thermodynamics, atmospheric physics, the greenhouse effect, CO₂, climate models, or energy balance. 
           All answers are sourced exclusively from accepted thermodynamic and mathematical principles.
         </p>
@@ -122,10 +121,6 @@ export default function ClimateInterpreterPage() {
             </div>
           </form>
         </Card>
-
-        <p className="text-center text-muted-foreground mt-6 mb-10">
-          Responses are generated using Grok with Retrieval-Augmented Generation.
-        </p>
       </div>      
     </section>
   );
