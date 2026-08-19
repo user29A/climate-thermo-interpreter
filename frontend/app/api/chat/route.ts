@@ -1,5 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 
+export const maxDuration = 300;
+export const dynamic = "force-dynamic";
+
 const MAX_MESSAGES = 40;
 const MAX_MESSAGE_CHARS = 8000;
 

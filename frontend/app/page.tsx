@@ -46,13 +46,20 @@ export default function ClimateInterpreterPage() {
 
       if (!res.ok) {
         let message = "Error connecting to the interpreter. Please try again.";
+        if (res.status === 504 || res.status === 502 || res.status === 524) {
+          message =
+            "The interpreter is still working, but the connection timed out. Please wait a moment and try again.";
+        }
         try {
           const err = await res.json();
+          if (typeof err?.error === "string" && err.error.trim()) {
+            message = err.error;
+          }
           if (res.status === 429) {
             message = err.error || "Too many questions right now. Please wait a few minutes and try again.";
           }
         } catch {
-          // keep default message
+          // keep default or timeout message
         }
         setMessages((prev) => [...prev, { role: "assistant", content: message }]);
         return;

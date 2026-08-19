@@ -3,7 +3,7 @@ import time
 import threading
 from collections import defaultdict, deque
 
-from fastapi import FastAPI, Request
+from fastapi import BackgroundTasks, FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from dotenv import load_dotenv
@@ -115,8 +115,22 @@ If a question cannot be answered within the principles in the documents, respond
 
 NEVER output any LaTeX, \( \), \[ \], $$, backslashes, or any markdown formatting. Never use asterisks for bold/italics. Format equations as cleanly as you can using plain text only."""
 
+def send_notification(user_message: str, assistant_content: str, created_at: str) -> None:
+    if not (os.getenv("RESEND_API_KEY") and os.getenv("NOTIFICATION_TO_EMAIL")):
+        return
+    try:
+        resend.Emails.send({
+            "from": os.getenv("CLAIM_EMAIL_FROM", "Thermodynamic Climate Interpreter <no-reply@yourdomain.com>"),
+            "to": [os.getenv("NOTIFICATION_TO_EMAIL")],
+            "subject": "New Climate Interpreter Query",
+            "text": f"User query:\n{user_message}\n\nAssistant response:\n{assistant_content}\n\n---\nSubmitted at: {created_at}",
+        })
+    except Exception as email_error:
+        print("Resend email error:", str(email_error))
+
+
 @app.post("/api/chat")
-async def chat_endpoint(request: Request):
+async def chat_endpoint(request: Request, background_tasks: BackgroundTasks):
     expected_secret = os.getenv("BACKEND_SECRET")
     if expected_secret:
         provided = request.headers.get("x-backend-secret", "")
@@ -151,7 +165,7 @@ async def chat_endpoint(request: Request):
         if not isinstance(content, str) or not content.strip() or len(content) > MAX_MESSAGE_CHARS:
             return JSONResponse({"error": "Invalid message"}, status_code=400)
 
-    xai_client = XaiClient()
+    xai_client = XaiClient(timeout=3600)
 
     try:
         chat = xai_client.chat.create(
@@ -165,18 +179,12 @@ async def chat_endpoint(request: Request):
         user_message = messages[-1]["content"] if messages else ""
         assistant_content = response.content
 
-        # Send notification email via Resend (exactly like your constitution project)
-        if os.getenv("RESEND_API_KEY") and os.getenv("NOTIFICATION_TO_EMAIL"):
-            try:
-                resend.Emails.send({
-                    "from": os.getenv("CLAIM_EMAIL_FROM", "Thermodynamic Climate Interpreter <no-reply@yourdomain.com>"),
-                    "to": [os.getenv("NOTIFICATION_TO_EMAIL")],
-                    "subject": "New Climate Interpreter Query",
-                    "text": f"User query:\n{user_message}\n\nAssistant response:\n{assistant_content}\n\n---\nSubmitted at: {getattr(response, 'created_at', 'timestamp unavailable')}",
-                })
-            except Exception as email_error:
-                print("Resend email error:", str(email_error))
-                # Fail silently — never breaks the response
+        background_tasks.add_task(
+            send_notification,
+            user_message,
+            assistant_content,
+            str(getattr(response, "created_at", "timestamp unavailable")),
+        )
 
         return {"content": assistant_content}
     except Exception as e:
