@@ -5,15 +5,19 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 
+const WAITING_MESSAGE = "Awaiting your input... (scroll down for the input area)";
+
 export default function ClimateInterpreterPage() {
   const [messages, setMessages] = useState<Array<{ role: "user" | "assistant"; content: string }>>([
     {
       role: "assistant",
-      content: "Awaiting your input... (scroll down for the input area)",
+      content: WAITING_MESSAGE,
     },
   ]);
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [thinkSeconds, setThinkSeconds] = useState(0);
+  const [copied, setCopied] = useState(false);
 
   const scrollRef = useRef<HTMLDivElement>(null);
 
@@ -25,6 +29,33 @@ export default function ClimateInterpreterPage() {
       });
     }
   }, [messages.length, isLoading]);
+
+  useEffect(() => {
+    if (!isLoading) {
+      setThinkSeconds(0);
+      return;
+    }
+    const timer = setInterval(() => setThinkSeconds((s) => s + 1), 1000);
+    return () => clearInterval(timer);
+  }, [isLoading]);
+
+  const handleCopy = async () => {
+    const lines = messages
+      .filter((msg) => msg.content !== WAITING_MESSAGE)
+      .map((msg) => `${msg.role === "user" ? "User" : "Interpreter"}:\n${msg.content}`);
+    if (input.trim()) {
+      lines.push(`User (unsent):\n${input.trim()}`);
+    }
+    const text = lines.join("\n\n");
+    if (!text) return;
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch (err) {
+      console.error("Copy failed:", err);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -121,7 +152,17 @@ export default function ClimateInterpreterPage() {
               {isLoading && (
                 <div className="flex justify-start">
                   <div className="bg-muted rounded-lg px-6 py-4">
-                    <p className="text-muted-foreground">Thinking with thermodynamics...</p>
+                    <p className="text-muted-foreground flex items-center gap-2">
+                      <span>Thinking with thermodynamics</span>
+                      <span className="inline-flex items-end gap-1 h-3" aria-hidden="true">
+                        <span className="size-1.5 rounded-full bg-muted-foreground animate-bounce [animation-delay:-0.3s]" />
+                        <span className="size-1.5 rounded-full bg-muted-foreground animate-bounce [animation-delay:-0.15s]" />
+                        <span className="size-1.5 rounded-full bg-muted-foreground animate-bounce" />
+                      </span>
+                      {thinkSeconds > 0 ? (
+                        <span className="tabular-nums">{thinkSeconds}s</span>
+                      ) : null}
+                    </p>
                   </div>
                 </div>
               )}
@@ -138,9 +179,23 @@ export default function ClimateInterpreterPage() {
                 className="min-h-24 resize-none"
                 disabled={isLoading}
               />
-              <Button type="submit" size="lg" disabled={isLoading || !input.trim()}>
-                Send
-              </Button>
+              <div className="flex flex-col gap-2">
+                <Button type="submit" size="lg" disabled={isLoading || !input.trim()}>
+                  Send
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="lg"
+                  onClick={handleCopy}
+                  disabled={
+                    isLoading ||
+                    (messages.every((msg) => msg.content === WAITING_MESSAGE) && !input.trim())
+                  }
+                >
+                  {copied ? "Copied" : "Copy"}
+                </Button>
+              </div>
             </div>
           </form>
         </Card>
