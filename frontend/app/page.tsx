@@ -4,7 +4,6 @@ import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
-import Link from "next/link";
 
 export default function ClimateInterpreterPage() {
   const [messages, setMessages] = useState<Array<{ role: "user" | "assistant"; content: string }>>([
@@ -79,19 +78,27 @@ export default function ClimateInterpreterPage() {
   };
 
   return (
-    <section className="py-16 md:py-24 lg:py-16 min-h-screen bg-background">
-      <div className="container mx-auto px-4 max-w-5xl">
-        <h1 className="text-4xl md:text-6xl font-bold text-center mb-12 text-red-700">
-          Thermodynamic Climate Interpreter
-        </h1>
+    <section className="min-h-screen bg-background">
+      <header
+        className="relative w-full bg-cover bg-center"
+        style={{ backgroundImage: "url('/header.jpg')" }}
+      >
+        <div className="absolute inset-0 bg-gradient-to-b from-white/45 via-white/30 to-background" />
+        <div className="relative container mx-auto px-4 max-w-5xl py-16 md:py-20">
+          <h1 className="text-4xl md:text-6xl font-bold text-center text-red-700 drop-shadow-[0_1px_8px_rgba(255,255,255,0.9)]">
+            Thermodynamic Climate Interpreter
+          </h1>
+        </div>
+      </header>
 
+      <div className="container mx-auto px-4 max-w-5xl pt-8 md:pt-10">
         <p className="text-center text-lg md:text-xl text-muted-foreground mb-12 max-w-3xl mx-auto">
           Ask any question about radiation, thermodynamics, atmospheric physics, the greenhouse effect, CO₂, climate models, or energy balance. 
           All answers are sourced exclusively from accepted thermodynamic and mathematical principles.
         </p>
 
         {/* Tall card with input at the bottom */}
-        <Card className="h-[800px] md:h-[65vh] flex flex-col bg-background/95 shadow-xl border-red-700/20">
+        <Card className="h-[800px] md:h-[65vh] flex flex-col bg-background shadow-xl border-red-700/20">
           {/* Messages area */}
           <div className="flex-1 p-6 overflow-y-auto" ref={scrollRef}>
             <div className="flex flex-col gap-6">
