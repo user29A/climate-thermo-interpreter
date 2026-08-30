@@ -197,6 +197,10 @@ export default function ClimateInterpreterPage() {
                 </Button>
               </div>
             </div>
+            <p className="text-sm text-muted-foreground mt-3">
+              Replies can take several minutes. The interpreter is working through the physics
+              and mathematics of thermodynamics, not producing a canned slogan.
+            </p>
           </form>
         </Card>
 
