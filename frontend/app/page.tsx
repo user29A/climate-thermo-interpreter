@@ -138,14 +138,15 @@ export default function ClimateInterpreterPage() {
         setMessages((prev) => [...prev, { role: "assistant", content: data.error as string }]);
         return;
       }
-      if (!data.content) {
+      const reply = data.content;
+      if (!reply) {
         setMessages((prev) => [
           ...prev,
           { role: "assistant", content: "Error connecting to the interpreter. Please try again." },
         ]);
         return;
       }
-      setMessages((prev) => [...prev, { role: "assistant", content: data.content }]);
+      setMessages((prev) => [...prev, { role: "assistant", content: reply }]);
     } catch (error: any) {
       console.error("Fetch error:", error);
       setMessages((prev) => [
