@@ -20,6 +20,7 @@ export default function ClimateInterpreterPage() {
   const [copied, setCopied] = useState(false);
 
   const scrollRef = useRef<HTMLDivElement>(null);
+  const thinkSecondsRef = useRef(0);
 
   useEffect(() => {
     if (scrollRef.current) {
@@ -33,9 +34,13 @@ export default function ClimateInterpreterPage() {
   useEffect(() => {
     if (!isLoading) {
       setThinkSeconds(0);
+      thinkSecondsRef.current = 0;
       return;
     }
-    const timer = setInterval(() => setThinkSeconds((s) => s + 1), 1000);
+    const timer = setInterval(() => {
+      thinkSecondsRef.current += 1;
+      setThinkSeconds(thinkSecondsRef.current);
+    }, 1000);
     return () => clearInterval(timer);
   }, [isLoading]);
 
@@ -55,6 +60,39 @@ export default function ClimateInterpreterPage() {
     } catch (err) {
       console.error("Copy failed:", err);
     }
+  };
+
+  const readChatResponse = async (
+    res: Response
+  ): Promise<{ content?: string; error?: string }> => {
+    const contentType = res.headers.get("content-type") || "";
+    if (contentType.includes("text/event-stream") && res.body) {
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let buf = "";
+      let last: { content?: string; error?: string } | null = null;
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buf += decoder.decode(value, { stream: true });
+        const parts = buf.split("\n\n");
+        buf = parts.pop() || "";
+        for (const part of parts) {
+          for (const line of part.split("\n")) {
+            if (!line.startsWith("data:")) continue;
+            const raw = line.slice(5).trim();
+            if (!raw) continue;
+            try {
+              last = JSON.parse(raw);
+            } catch {
+              // ignore malformed chunks
+            }
+          }
+        }
+      }
+      return last || { error: "Empty response" };
+    }
+    return res.json();
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -95,13 +133,30 @@ export default function ClimateInterpreterPage() {
         return;
       }
 
-      const data = await res.json();
+      const data = await readChatResponse(res);
+      if (data.error) {
+        setMessages((prev) => [...prev, { role: "assistant", content: data.error as string }]);
+        return;
+      }
+      if (!data.content) {
+        setMessages((prev) => [
+          ...prev,
+          { role: "assistant", content: "Error connecting to the interpreter. Please try again." },
+        ]);
+        return;
+      }
       setMessages((prev) => [...prev, { role: "assistant", content: data.content }]);
     } catch (error: any) {
       console.error("Fetch error:", error);
       setMessages((prev) => [
         ...prev,
-        { role: "assistant", content: "Error connecting to the interpreter. Please try again." },
+        {
+          role: "assistant",
+          content:
+            thinkSecondsRef.current >= 15
+              ? "The interpreter is still working, but the connection timed out. Please wait a moment and try again."
+              : "Error connecting to the interpreter. Please try again.",
+        },
       ]);
     } finally {
       setIsLoading(false);

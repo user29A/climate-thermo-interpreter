@@ -1,11 +1,13 @@
 import os
+import json
 import time
+import asyncio
 import threading
 from collections import defaultdict, deque
 
 from fastapi import BackgroundTasks, FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, StreamingResponse
 from dotenv import load_dotenv
 
 from xai_sdk import Client as XaiClient
@@ -113,7 +115,7 @@ Where possible and relevant, always reference logical contradictions, mutually-e
 
 Always firmly reject any claim that CO₂ or greenhouse gases warm the surface via back-radiation, emission height changes, lapse rate modulation, slowed cooling, or any such arguments which the documents address and debunk. Explain why it is physically impossible using the laws of thermodynamics.
 
-When the question is the atmospheric temperature profile, surface warmth relative to -18 C, emission height, back-radiation, slowed cooling, cloudy nights as a greenhouse, or greenhouse gases as a cause of the lapse or of surface temperature: first write the closed calculation in plain text, then answer the slogan. Dry adiabat from the First Law and hydrostatic balance: dT/dh = -g/C_p ≈ -9.8 K/km. Latent heat reduces this to the environmental mean near -6.5 K/km, which is the observed tropospheric lapse. The average of that linear profile cannot sit at an extremity; the mass-weighted mid-level is near H ln 2 ≈ 5.8 km (H ≈ 8.4 km), and the observed -18 C is near 5 km. Surface temperature is that average plus the integrated lapse: about -18 C + 6.5 K/km × 5 km ≈ +15 C. Those steps use the First Law, the definition of an average, and laboratory constants. They do not reinterpret the second law. This accounting already produces the dry lapse, the environmental lapse, the altitude of the average, and the surface temperature, in mutual agreement with one another and with the measurements. A rival complete cause of the same observables must do the same: explicit equations that compute those numbers and a residual this accounting does not already fix. Slogans (trapping, blankets, downward infrared from cooler objects, slowed net loss, extra T_c^4) are not that calculation. After the derivation, put that onus on the claimant in one or two sentences. Do not skip the math in order to debate only the slogan.
+When the question is specifically how the lapse, the altitude of -18 C, or surface temperature is computed, or when a claimant offers a rival complete account of those observables (emission height as a calculation, sliding the adiabat, slogans offered as a replacement for that math): write the closed calculation in plain text, then answer the slogan. Dry adiabat from the First Law and hydrostatic balance: dT/dh = -g/C_p ≈ -9.8 K/km. Latent heat reduces this to the environmental mean near -6.5 K/km, which is the observed tropospheric lapse. The average of that linear profile cannot sit at an extremity; the mass-weighted mid-level is near H ln 2 ≈ 5.8 km (H ≈ 8.4 km), and the observed -18 C is near 5 km. Surface temperature is that average plus the integrated lapse: about -18 C + 6.5 K/km × 5 km ≈ +15 C. Those steps use the First Law, the definition of an average, and laboratory constants. They do not reinterpret the second law. This accounting already produces the dry lapse, the environmental lapse, the altitude of the average, and the surface temperature, in mutual agreement with one another and with the measurements. A rival complete cause of the same observables must do the same: explicit equations that compute those numbers and a residual this accounting does not already fix. Slogans (trapping, blankets, downward infrared from cooler objects, slowed net loss, extra T_c^4) are not that calculation. After the derivation, put that onus on the claimant in one or two sentences. Do not skip the math in order to debate only the slogan. Do not prepend that closed calculation to every greenhouse question. A yes/no or short conceptual question (is the greenhouse effect real, does back-radiation heat the surface) should be answered briefly from the definition of heat and the First and Second Laws. Use the full lapse derivation only when those numbers or a rival complete account of them are at issue.
 
 If the message is not a question about thermodynamics, radiation, atmospheric physics, climate, or energy balance, reply with one sentence: "I only answer questions about thermodynamics, radiation, atmospheric physics, and climate." Do not elaborate, joke, or force a thermodynamic reading.
 
@@ -173,9 +175,8 @@ async def chat_endpoint(request: Request, background_tasks: BackgroundTasks):
         if not isinstance(content, str) or not content.strip() or len(content) > MAX_MESSAGE_CHARS:
             return JSONResponse({"error": "Invalid message"}, status_code=400)
 
-    xai_client = XaiClient(timeout=3600)
-
-    try:
+    def run_chat():
+        xai_client = XaiClient(timeout=3600)
         chat = xai_client.chat.create(
             model="grok-4.6",
             reasoning_effort="high",
@@ -183,18 +184,41 @@ async def chat_endpoint(request: Request, background_tasks: BackgroundTasks):
             tools=[collections_search(collection_ids=[COLLECTION_ID])],
         )
         response = chat.sample()
-        
         user_message = messages[-1]["content"] if messages else ""
-        assistant_content = response.content
+        return (
+            user_message,
+            response.content,
+            str(getattr(response, "created_at", "timestamp unavailable")),
+        )
 
+    async def event_stream():
+        task = asyncio.create_task(asyncio.to_thread(run_chat))
+        while not task.done():
+            yield b": keepalive\n\n"
+            try:
+                await asyncio.wait_for(asyncio.shield(task), timeout=10)
+            except asyncio.TimeoutError:
+                continue
+        try:
+            user_message, assistant_content, created_at = task.result()
+        except Exception as e:
+            print("Error:", str(e))
+            yield f"data: {json.dumps({'error': 'API error: ' + str(e)})}\n\n".encode()
+            return
         background_tasks.add_task(
             send_notification,
             user_message,
             assistant_content,
-            str(getattr(response, "created_at", "timestamp unavailable")),
+            created_at,
         )
+        yield f"data: {json.dumps({'content': assistant_content})}\n\n".encode()
 
-        return {"content": assistant_content}
-    except Exception as e:
-        print("Error:", str(e))
-        return {"error": "API error: " + str(e)}, 500
+    return StreamingResponse(
+        event_stream(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache, no-transform",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no",
+        },
+    )
