@@ -7,6 +7,44 @@ import { Textarea } from "@/components/ui/textarea";
 
 const WAITING_MESSAGE = "Awaiting your input... (scroll down for the input area)";
 
+const FAQ_ITEMS = [
+  {
+    question: "Is the radiative greenhouse effect real?",
+    paragraphs: [
+      "No. Heat is energy transferred because of a temperature difference, and it flows only from hotter to colder. Radiation from cooler atmospheric gases, including CO₂, is not heat performed on the warmer surface.",
+      "Surface temperature is set by absorbed sunlight, atmospheric mass and pressure, and the gravity-driven lapse. Those already produce the observed profile. A radiative greenhouse is not an extra term in that accounting.",
+    ],
+  },
+  {
+    question: "Can cooler CO₂ heat the warmer ground?",
+    paragraphs: [
+      "No. The hotter surface still emits at its own temperature, σ T_h⁴. The difference σ (T_h⁴ − T_c⁴) is heat transferred to the colder body. It is not two opposing heats, not thermalization of T_c⁴ in the hotter body, and not slowed emission that raises T_h.",
+      "A blanket keeps you warm by cutting convection and contact with colder air, not by colder fabric heating you. A space blanket works because its outer surface has low emissivity. Neither is a model of a colder gas heating a warmer ground.",
+    ],
+  },
+  {
+    question: "Does “slowed cooling” raise Earth’s temperature?",
+    paragraphs: [
+      "No. In greenhouse theory, “slowed cooling” is the gap between a fictional no-atmosphere planet at −18 °C and the real Earth at +15 °C, relabeled as an effect. The real planet is not that fiction with an inhibitor attached.",
+      "A smaller temperature contrast does reduce heat from hotter ground to cooler air; that is ordinary constitutive transfer. It does not mean the ground is being heated by the air, and it does not replace the adiabatic lapse already fixed by the First Law and hydrostatic balance.",
+    ],
+  },
+  {
+    question: "Why is the surface about +15 °C, not −18 °C?",
+    paragraphs: [
+      "The −18 °C figure is the blackbody equivalent of Earth’s outgoing planetary power, S(1−α)/4. It is not a surface temperature the ground would have without greenhouse gases.",
+      "The dry adiabat is dT/dh = −g/C_p ≈ −9.8 K/km. Latent heat reduces this to an environmental mean near −6.5 K/km. The mass-weighted mid-level of that linear troposphere is near 5 km, where the observed temperature is about −18 °C. Surface temperature is that average plus the integrated lapse: −18 °C + 6.5 K/km × 5 km ≈ +15 °C. Sunlight, gravity, and atmospheric mass already close that calculation.",
+    ],
+  },
+  {
+    question: "CO₂ absorbs infrared. Doesn’t that trap heat?",
+    paragraphs: [
+      "Absorption is real; trapping is not. CO₂ resonantly absorbs and re-emits at its vibrational bands. Near those wavelengths the lower air is already optically thick, so extra CO₂ does not add a new heat source at the ground.",
+      "Heat still moves only from hotter regions to colder ones. Photons absorbed by cooler gas are not a reservoir stored and later delivered as heat to a warmer surface. Surface emission continues at the ground’s own temperature. Planetary outgoing power is the ensemble energy balance, not a slowed leak of ground emission.",
+    ],
+  },
+];
+
 export default function ClimateInterpreterPage() {
   const [messages, setMessages] = useState<Array<{ role: "user" | "assistant"; content: string }>>([
     {
@@ -259,6 +297,34 @@ export default function ClimateInterpreterPage() {
             </p>
           </form>
         </Card>
+
+        <section className="mt-16" aria-labelledby="faq-heading">
+          <h2
+            id="faq-heading"
+            className="text-3xl md:text-4xl font-bold text-center text-red-700 mb-4"
+          >
+            Frequently asked questions
+          </h2>
+          <p className="text-center text-muted-foreground mb-10 max-w-3xl mx-auto">
+            The questions visitors ask most often, answered from the same thermodynamic
+            principles as the interpreter.
+          </p>
+          <div className="flex flex-col gap-6">
+            {FAQ_ITEMS.map((item) => (
+              <Card key={item.question} className="px-6 border-red-700/20 shadow-xl">
+                <h3 className="text-xl font-semibold mb-3">{item.question}</h3>
+                {item.paragraphs.map((paragraph) => (
+                  <p
+                    key={paragraph}
+                    className="text-muted-foreground leading-relaxed mb-3 last:mb-0"
+                  >
+                    {paragraph}
+                  </p>
+                ))}
+              </Card>
+            ))}
+          </div>
+        </section>
 
         <p className="text-center text-muted-foreground mt-8 mb-10">
           Contact:{" "}
