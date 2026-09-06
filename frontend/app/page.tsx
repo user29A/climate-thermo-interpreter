@@ -32,7 +32,7 @@ const FAQ_ITEMS = [
   {
     question: "Why is the surface about +15 °C, not −18 °C?",
     paragraphs: [
-      "The −18 °C figure is the blackbody equivalent of Earth’s outgoing planetary power, S(1−α)/4. It is not a surface temperature the ground would have without greenhouse gases.",
+      "The −18 °C figure is the blackbody equivalent of Earth’s outgoing planetary power, S(1−α)/4 ≈ 240 W/m². That expression is the outgoing. It is not incoming solar, not absorbed sunlight, and not a surface temperature the ground would have without greenhouse gases.",
       "The dry adiabat is dT/dh = −g/C_p ≈ −9.8 K/km. Latent heat reduces this to an environmental mean near −6.5 K/km. The mass-weighted mid-level of that linear troposphere is near 5 km, where the observed temperature is about −18 °C. Surface temperature is that average plus the integrated lapse: −18 °C + 6.5 K/km × 5 km ≈ +15 °C. Sunlight, gravity, and atmospheric mass already close that calculation.",
     ],
   },
