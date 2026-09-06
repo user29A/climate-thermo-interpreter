@@ -194,11 +194,14 @@ async def chat_endpoint(request: Request, background_tasks: BackgroundTasks):
         )
 
     async def event_stream():
+        # Real SSE data pings (not comments) so HTTP/1.1 proxies and browsers
+        # treat the connection as active while grok-4.6 is still thinking.
+        ping = b'data: {"ping":true}\n\n'
         task = asyncio.create_task(asyncio.to_thread(run_chat))
         while not task.done():
-            yield b": keepalive\n\n"
+            yield ping
             try:
-                await asyncio.wait_for(asyncio.shield(task), timeout=10)
+                await asyncio.wait_for(asyncio.shield(task), timeout=8)
             except asyncio.TimeoutError:
                 continue
         try:
@@ -222,5 +225,6 @@ async def chat_endpoint(request: Request, background_tasks: BackgroundTasks):
             "Cache-Control": "no-cache, no-transform",
             "Connection": "keep-alive",
             "X-Accel-Buffering": "no",
+            "Content-Type": "text/event-stream; charset=utf-8",
         },
     )

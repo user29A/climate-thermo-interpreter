@@ -100,6 +100,11 @@ export default function ClimateInterpreterPage() {
     }
   };
 
+  const connectionFailureMessage = () =>
+    thinkSecondsRef.current >= 15
+      ? "The interpreter is still working, but the connection timed out. Please wait a moment and try again."
+      : "Error connecting to the interpreter. Please try again.";
+
   const readChatResponse = async (
     res: Response
   ): Promise<{ content?: string; error?: string }> => {
@@ -109,24 +114,39 @@ export default function ClimateInterpreterPage() {
       const decoder = new TextDecoder();
       let buf = "";
       let last: { content?: string; error?: string } | null = null;
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        buf += decoder.decode(value, { stream: true });
-        const parts = buf.split("\n\n");
-        buf = parts.pop() || "";
-        for (const part of parts) {
-          for (const line of part.split("\n")) {
-            if (!line.startsWith("data:")) continue;
-            const raw = line.slice(5).trim();
-            if (!raw) continue;
-            try {
-              last = JSON.parse(raw);
-            } catch {
-              // ignore malformed chunks
-            }
+
+      const consumePart = (part: string) => {
+        for (const line of part.split("\n")) {
+          if (!line.startsWith("data:")) continue;
+          const raw = line.slice(5).trim();
+          if (!raw) continue;
+          try {
+            const parsed = JSON.parse(raw) as {
+              content?: string;
+              error?: string;
+              ping?: boolean;
+            };
+            if (parsed.ping) continue;
+            last = parsed;
+          } catch {
+            // ignore malformed chunks
           }
         }
+      };
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (value) {
+          buf += decoder.decode(value, { stream: !done });
+        }
+        if (done) {
+          buf += decoder.decode();
+          if (buf.trim()) consumePart(buf);
+          break;
+        }
+        const parts = buf.split("\n\n");
+        buf = parts.pop() || "";
+        for (const part of parts) consumePart(part);
       }
       return last || { error: "Empty response" };
     }
@@ -173,14 +193,16 @@ export default function ClimateInterpreterPage() {
 
       const data = await readChatResponse(res);
       if (data.error) {
-        setMessages((prev) => [...prev, { role: "assistant", content: data.error as string }]);
+        const message =
+          data.error === "Empty response" ? connectionFailureMessage() : data.error;
+        setMessages((prev) => [...prev, { role: "assistant", content: message }]);
         return;
       }
       const reply = data.content;
       if (!reply) {
         setMessages((prev) => [
           ...prev,
-          { role: "assistant", content: "Error connecting to the interpreter. Please try again." },
+          { role: "assistant", content: connectionFailureMessage() },
         ]);
         return;
       }
@@ -189,13 +211,7 @@ export default function ClimateInterpreterPage() {
       console.error("Fetch error:", error);
       setMessages((prev) => [
         ...prev,
-        {
-          role: "assistant",
-          content:
-            thinkSecondsRef.current >= 15
-              ? "The interpreter is still working, but the connection timed out. Please wait a moment and try again."
-              : "Error connecting to the interpreter. Please try again.",
-        },
+        { role: "assistant", content: connectionFailureMessage() },
       ]);
     } finally {
       setIsLoading(false);

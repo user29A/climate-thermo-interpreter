@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 
-export const maxDuration = 300;
+export const maxDuration = 800;
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
@@ -54,6 +54,7 @@ export async function POST(request: NextRequest) {
       method: "POST",
       headers,
       body: JSON.stringify(body),
+      cache: "no-store",
     });
 
     const contentType = res.headers.get("content-type") || "";
@@ -61,7 +62,7 @@ export async function POST(request: NextRequest) {
       return new Response(res.body, {
         status: res.status,
         headers: {
-          "Content-Type": "text/event-stream",
+          "Content-Type": "text/event-stream; charset=utf-8",
           "Cache-Control": "no-cache, no-transform",
           Connection: "keep-alive",
           "X-Accel-Buffering": "no",
